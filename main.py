@@ -13,4 +13,7 @@ if __name__ == '__main__':
         img_list.append(cv2.imread(os.path.join(img_dir,filename)))
 
     for img in img_list:
-        feature_detector.CalHLMatrix(img)
+        grayimg, maskimg, cornerimg = feature_detector.Corner_detection(img)
+        cv2.imwrite("gray.jpg",grayimg)
+        cv2.imwrite("mask.jpg",maskimg)
+        cv2.imwrite("corner.jpg",cornerimg)
