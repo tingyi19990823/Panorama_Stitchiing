@@ -1,5 +1,7 @@
 from cgi import test
+from operator import truediv
 from pickletools import uint8
+from tkinter import CENTER
 from cv2 import blur
 import numpy as np
 import cv2
@@ -8,7 +10,7 @@ import time
 
 corner_threshold = 10 # 1000比較正常
 kernel_size = 10
-keypoint_count = 250
+# keypoint_count = 250
 
 # input: 要pooling的圖片(灰階)、Kernel_Size
 # output: pooling完的圖片
@@ -49,6 +51,7 @@ def Create_CornerImg(img,maskImg):
 # output: 根據要的特徵點的數量輸出mask
 # 未完成
 def Non_Maximal_Suppression(input, keypoint_count):
+    height,width = input.shape[:2]
     start = time.clock()
     mask = np.zeros((input.shape[0],input.shape[1]),dtype = float)
     keypoints = 0   # 找到的特徵點數量
@@ -66,38 +69,43 @@ def Non_Maximal_Suppression(input, keypoint_count):
             x_center = current_keypoint_index[0]
             y_center = current_keypoint_index[1]
 
-            x_offset_right = x_center + radius
-            x_offset_left = x_center - radius
-            y_offset_up = y_center - radius
-            y_offset_down = y_center + radius
+            if (x_center + 20) > height or (x_center - 20) < 0 or (y_center + 20) > width or (y_center - 20) < 0:
+                mask[x_center,y_center] = 0
+                continue
 
-            if x_offset_right > input.shape[0]:
-                x_offset_right = input.shape[0]
-            if x_offset_left < 0:
-                x_offset_left = 0
-            if y_offset_up < 0:
-                y_offset_up = 0
-            if y_offset_down > input.shape[1]:
-                y_offset_down = input.shape[1]
+            height_offset_down = x_center + radius
+            height_offset_up = x_center - radius
+            width_offset_right = y_center + radius
+            width_offset_left = y_center - radius
+            
+            if height_offset_down > height:
+                height_offset_down = height
+            if height_offset_up < 0:
+                height_offset_up = 0
+            if width_offset_right > width:
+                width_offset_right = width
+            if width_offset_left < 0:
+                width_offset_left = 0
 
-            mask[x_offset_left:(x_offset_right+1), y_offset_up:(y_offset_down+1)] = 0   # 在範圍內的都變0
-            mask[x_center,y_center] = -1                                                # 變-1，下次就不會找到
+            mask[height_offset_up:(height_offset_down+1), width_offset_left:(width_offset_right+1)] = 0   # 在範圍內的都變0
+            mask[x_center,y_center] = -1                                                                  # 變-1，下次就不會找到
             keypoints = keypoints + 1
             if keypoints == keypoint_count:
                 break
         if radius < 0:
             break
+    mask[mask != -1] = 0
     mask[mask == -1] = 255
     end = time.clock()
-    if keypoints < 500:
+    if keypoints < keypoint_count:
         print('\n not enough keypoints , count: {} \n'.format(np.sum(mask == 255)))
     else:
-        print('\n Non_Maximal_Suppression done,keypoint count: {}, time cost: {} \n'.format(np.sum(mask == 255),end-start))
+        print('\n Non_Maximal_Suppression done,keypoint count: {}, radius: {}\n'.format(np.sum(mask == 255),radius))
     return mask
 
 # input: 要detect的圖片
 # output: 灰階、遮罩、角落偵測圖片
-def Corner_detection(img):
+def Corner_detection(img,keypoint_count):
     
     grayImg = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     blurImg = cv2.GaussianBlur(grayImg,(3,3),1.0)
@@ -119,8 +127,9 @@ def Corner_detection(img):
     HL_mat_dict[:,:,0] = Sx2
     HL_mat_dict[:,:,1] = Sy2
     HL_mat_dict[:,:,2] = Sxy
-    corner_response = (HL_mat_dict[:,:,0] * HL_mat_dict[:,:,1] - np.power(Sxy,2)) / (HL_mat_dict[:,:,0] + HL_mat_dict[:,:,1])       # det/trace
-    corner_response = np.nan_to_num(corner_response)
+    det = HL_mat_dict[:,:,0] * HL_mat_dict[:,:,1] - np.power(Sxy,2)
+    trace = HL_mat_dict[:,:,0] + HL_mat_dict[:,:,1]
+    corner_response = np.divide(det,trace,out = np.zeros_like(det), where=trace != 0)
 
     pooledImg = Max_Pooling(corner_response,kernel_size)
 
