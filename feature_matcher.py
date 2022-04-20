@@ -8,6 +8,9 @@ def Matcher(img1,img2,feature1,feature2,index1,index2):
 
     concatenate_img = np.concatenate((img1,img2),axis = 1)
 
+    # Threshold
+    threshold = 3
+
     for i in range(feature_count):
         min_dist = math.inf
         min_index = -1 
@@ -20,7 +23,7 @@ def Matcher(img1,img2,feature1,feature2,index1,index2):
         origin_y = index1[i][1]
         match_x = index2[min_index][0]
         match_y = index2[min_index][1]
-        if min_dist < 3:
+        if min_dist < threshold:
             # concatenate_img = cv2.line(concatenate_img,(origin_y,origin_x),(match_y + img1.shape[1],match_x),(int(255*min_dist),0,0),2)
             concatenate_img = cv2.circle(concatenate_img,(origin_y,origin_x),5,(255,0,0),1)
             concatenate_img = cv2.circle(concatenate_img,(match_y + img1.shape[1],match_x),5,(255,0,0),1)
