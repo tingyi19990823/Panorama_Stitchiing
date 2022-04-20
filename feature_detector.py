@@ -13,7 +13,7 @@ kernel_size = 10
 # keypoint_count = 250
 
 # input: 要pooling的圖片(灰階)、Kernel_Size
-# output: pooling完的圖片
+# output: pooling完的圖片,回傳所有可能的特徵點
 def Max_Pooling(input,kernel_size):
     pooledImg = np.zeros((input.shape[0],input.shape[1]))
     max_row = 0
@@ -42,9 +42,9 @@ def Create_CornerImg(img,maskImg):
     not_mask[not_mask == -1] = 255
     cornerImg = img
 
-    cornerImg[:,:,2] = np.bitwise_or(cornerImg[:,:,2],maskImg)
+    cornerImg[:,:,0] = np.bitwise_or(cornerImg[:,:,0],maskImg)
     cornerImg[:,:,1] = np.bitwise_and(cornerImg[:,:,1],not_mask)
-    cornerImg[:,:,0] = np.bitwise_and(cornerImg[:,:,0],not_mask)
+    cornerImg[:,:,2] = np.bitwise_and(cornerImg[:,:,2],not_mask)
     return cornerImg
 
 # input: 特徵點圖片、要取的特徵點數量

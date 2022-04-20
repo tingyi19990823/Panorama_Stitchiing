@@ -16,7 +16,9 @@ def Feature_Upsample(feature):
 # input: 彩色圖片
 # output: feature description
 def MSOP_descriptor_vector(img, mask,feature_count):
-    feature = np.zeros((8,8,feature_count),dtype=float)
+    feature = np.zeros((8,8,feature_count))
+    feature_index = np.zeros((feature_count,2),dtype = int)
+    # feature = np.zeros((8,8,feature_count),dtype=float)
     index = 0
 
     height , width = img.shape[:2]
@@ -72,6 +74,8 @@ def MSOP_descriptor_vector(img, mask,feature_count):
 
                 feature_resize = Feature_Upsample(rotate_feature)
                 feature[:,:,index] = feature_resize
+                feature_index[index,0] = i
+                feature_index[index,1] = j
                 index = index + 1
     
     
@@ -80,7 +84,7 @@ def MSOP_descriptor_vector(img, mask,feature_count):
     # cv2.imshow('test',lineImg)
     # cv2.waitKey(0)
 
-    return feature
+    return feature, feature_index
 
 
 if __name__ == '__main__':
@@ -88,4 +92,4 @@ if __name__ == '__main__':
     mask_npy = np.load('./result_pic/mask_0.npy')
     # img = cv2.imread('./pic/test2.jpg')
     # mask_npy = np.load('./result_pic/mask_1.npy')
-    MSOP_descriptor_vector(img,mask_npy,250)
+    MSOP_descriptor_vector(img,mask_npy,500)
