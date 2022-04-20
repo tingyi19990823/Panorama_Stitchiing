@@ -13,7 +13,7 @@ kernel_size = 10
 # keypoint_count = 250
 
 # input: 要pooling的圖片(灰階)、Kernel_Size
-# output: pooling完的圖片
+# output: pooling完的圖片,回傳所有可能的特徵點
 def Max_Pooling(input,kernel_size):
     pooledImg = np.zeros((input.shape[0],input.shape[1]))
     max_row = 0

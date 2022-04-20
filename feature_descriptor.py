@@ -92,4 +92,4 @@ if __name__ == '__main__':
     mask_npy = np.load('./result_pic/mask_0.npy')
     # img = cv2.imread('./pic/test2.jpg')
     # mask_npy = np.load('./result_pic/mask_1.npy')
-    MSOP_descriptor_vector(img,mask_npy,250)
+    MSOP_descriptor_vector(img,mask_npy,500)
