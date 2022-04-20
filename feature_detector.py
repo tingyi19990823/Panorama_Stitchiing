@@ -42,9 +42,9 @@ def Create_CornerImg(img,maskImg):
     not_mask[not_mask == -1] = 255
     cornerImg = img
 
-    cornerImg[:,:,2] = np.bitwise_or(cornerImg[:,:,2],maskImg)
+    cornerImg[:,:,0] = np.bitwise_or(cornerImg[:,:,0],maskImg)
     cornerImg[:,:,1] = np.bitwise_and(cornerImg[:,:,1],not_mask)
-    cornerImg[:,:,0] = np.bitwise_and(cornerImg[:,:,0],not_mask)
+    cornerImg[:,:,2] = np.bitwise_and(cornerImg[:,:,2],not_mask)
     return cornerImg
 
 # input: 特徵點圖片、要取的特徵點數量

@@ -7,13 +7,15 @@ import time
 import numpy as np
 
 # img_dir = "./grail"
-img_dir = "./pic"
+# img_dir = "./pic"
+img_dir = "./parrington"
 img_list = []
 
 # result_dir = "./result_grail"
-result_dir = "./result_pic"
+# result_dir = "./result_pic"
+result_dir = "./result_parrington"
 
-keypoint_count = 250
+keypoint_count = 500
 
 if __name__ == '__main__':
     start = time.clock()
@@ -31,8 +33,10 @@ if __name__ == '__main__':
         np.save(os.path.join(result_dir,'mask_'+ str(index)),maskimg)
 
         # feature descriptor
-        description = feature_descriptor.MSOP_descriptor_vector(img,maskimg,keypoint_count)
+        print('description {} ...'.format(index))
+        description,description_index = feature_descriptor.MSOP_descriptor_vector(img,maskimg,keypoint_count)
         np.save(os.path.join(result_dir,'feature_'+ str(index)),description)
+        np.save(os.path.join(result_dir,'feature_index'+ str(index)),description_index)
         index = index + 1
     end = time.clock()
     print("total time: ",end - start)
