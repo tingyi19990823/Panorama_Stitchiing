@@ -1,7 +1,11 @@
+from itertools import count
 from re import X
 import numpy as np
 import cv2
 import math
+import os
+
+result_dir = "./result_parrington"
 
 def Matcher(img1,img2,feature1,feature2,index1,index2):
     feature_count = feature1.shape[2]
@@ -9,7 +13,13 @@ def Matcher(img1,img2,feature1,feature2,index1,index2):
     concatenate_img = np.concatenate((img1,img2),axis = 1)
 
     # Threshold
-    threshold = 3
+    threshold = 2.5
+
+    # 儲存對應點
+    # correspond = np.zeros((feature_count,4))
+    correspondA = np.zeros((1, 5))
+    correspondB = np.zeros((1, 5))
+    counter = 0
 
     for i in range(feature_count):
         min_dist = math.inf
@@ -25,12 +35,25 @@ def Matcher(img1,img2,feature1,feature2,index1,index2):
         match_y = index2[min_index][1]
         if min_dist < threshold:
             # concatenate_img = cv2.line(concatenate_img,(origin_y,origin_x),(match_y + img1.shape[1],match_x),(int(255*min_dist),0,0),2)
-            concatenate_img = cv2.circle(concatenate_img,(origin_y,origin_x),5,(255,0,0),1)
-            concatenate_img = cv2.circle(concatenate_img,(match_y + img1.shape[1],match_x),5,(255,0,0),1)
+            concatenate_img = cv2.circle(concatenate_img,(origin_y,origin_x),5,(255,0,0),1)                  # 左圖
+            concatenate_img = cv2.circle(concatenate_img,(match_y + img1.shape[1],match_x),5,(255,0,0),1)    # 右圖
             print(min_dist)
+            if counter == 0:
+                correspondA = [i, origin_x, origin_y, match_x, match_y]
+            else:
+                correspondB = [i, origin_x, origin_y, match_x, match_y]
+                correspondA = np.append(correspondA, correspondB, axis=0)
+                
+            counter = counter + 1
+    
+    correspondA = np.reshape(correspondA, (counter, 5))    
+    print('# of matching point = ', counter)
+    print(correspondA)
     # cv2.imshow('test',concatenate_img)
     # cv2.waitKey(0)
     cv2.imwrite('match.jpg',concatenate_img)
+    
+    np.save(os.path.join(result_dir,'correspond_0'),correspondA)
 
 if __name__ == '__main__':
     # 讀圖片

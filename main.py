@@ -15,7 +15,7 @@ img_list = []
 # result_dir = "./result_pic"
 result_dir = "./result_parrington"
 
-keypoint_count = 500
+keypoint_count = 1000
 
 if __name__ == '__main__':
     start = time.clock()
