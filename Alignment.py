@@ -101,18 +101,7 @@ def FinalH(correspond):
     print(max)
     return TH
 
-if __name__ == '__main__':
-    correspond = np.load('./result_parrington/correspond_0.npy')
-    
-    # Find the Best Homography Matrix
-    H = FinalH(correspond)
-    print(H)
-    np.save(os.path.join(result_dir,'Best_Homography_Matrix'),H)
-
-    # Stitching Image
-    # 讀圖片
-    img1 = cv2.imread('./result_parrington/corner0.jpg')  # 右圖, 要轉換的圖
-    img2 = cv2.imread('./result_parrington/corner1.jpg')  # 左圖
+def BoundaryCompute(img1, img2):
 
     # 找出要變換之圖片轉換後的邊界
     boundary1_00 = [0, 0 ,1]
@@ -159,8 +148,10 @@ if __name__ == '__main__':
         # newboundary1_01[0] = newboundary1_01[0] + offset
         # newboundary1_11[0] = newboundary1_11[0] + offset
         # newboundary1_10[0] = newboundary1_10[0] + offset
-        
-    # print(offset)
+    
+    return h, w, offset
+
+def MergeImg(H, h, w, img1, img2):
     inverseH = np.linalg.inv(H)
     print(inverseH)
     img = np.zeros((max(img1.shape[0], h), img1.shape[1]+w, 3), np.uint8)
@@ -182,4 +173,21 @@ if __name__ == '__main__':
     cv2.imshow('img', img)
     cv2.imwrite('./result_parrington/AlignmentTest.jpg', img)
     cv2.waitKey(0)
+
+if __name__ == '__main__':
+    correspond = np.load('./result_parrington/correspond_0.npy')
+    
+    # Find the Best Homography Matrix
+    H = FinalH(correspond)
+    print(H)
+    np.save(os.path.join(result_dir,'Best_Homography_Matrix'),H)
+
+    # Stitching Image
+    # 讀圖片
+    img1 = cv2.imread('./result_parrington/corner0.jpg')  # 右圖, 要轉換的圖
+    img2 = cv2.imread('./result_parrington/corner1.jpg')  # 左圖
+
+    h, w, offset = BoundaryCompute(img1, img2)
+    MergeImg(H, h, w, img1, img2)
+    
 
