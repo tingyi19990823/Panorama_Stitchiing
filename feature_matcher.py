@@ -10,7 +10,7 @@ result_dir = "./result_parrington"
 def Matcher(img1,img2,feature1,feature2,index1,index2):
     feature_count = feature1.shape[2]
 
-    concatenate_img = np.concatenate((img1,img2),axis = 1)
+    concatenate_img = np.concatenate((img2,img1),axis = 1)
 
     # Threshold
     threshold = 2.5
@@ -35,8 +35,10 @@ def Matcher(img1,img2,feature1,feature2,index1,index2):
         match_y = index2[min_index][1]
         if min_dist < threshold:
             # concatenate_img = cv2.line(concatenate_img,(origin_y,origin_x),(match_y + img1.shape[1],match_x),(int(255*min_dist),0,0),2)
-            concatenate_img = cv2.circle(concatenate_img,(origin_y,origin_x),5,(255,0,0),1)                  # 左圖
-            concatenate_img = cv2.circle(concatenate_img,(match_y + img1.shape[1],match_x),5,(255,0,0),1)    # 右圖
+            # concatenate_img = cv2.circle(concatenate_img,(origin_y,origin_x),5,(255,0,0),1)                  # 左圖
+            # concatenate_img = cv2.circle(concatenate_img,(match_y + img1.shape[1],match_x),5,(255,0,0),1)    # 右圖
+            concatenate_img = cv2.circle(concatenate_img,(origin_y + img2.shape[1],origin_x),5,(255,0,0),1)    # 右圖
+            concatenate_img = cv2.circle(concatenate_img,(match_y,match_x),5,(255,0,0),1)                      # 左圖
             print(min_dist)
             if counter == 0:
                 correspondA = [i, origin_x, origin_y, match_x, match_y]

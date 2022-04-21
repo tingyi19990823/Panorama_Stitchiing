@@ -104,6 +104,82 @@ def FinalH(correspond):
 if __name__ == '__main__':
     correspond = np.load('./result_parrington/correspond_0.npy')
     
-    print(FinalH(correspond))
+    # Find the Best Homography Matrix
+    H = FinalH(correspond)
+    print(H)
+    np.save(os.path.join(result_dir,'Best_Homography_Matrix'),H)
 
-    np.save(os.path.join(result_dir,'Best_Homography_Matrix'),FinalH)
+    # Stitching Image
+    # 讀圖片
+    img1 = cv2.imread('./result_parrington/corner0.jpg')  # 右圖, 要轉換的圖
+    img2 = cv2.imread('./result_parrington/corner1.jpg')  # 左圖
+
+    # 找出要變換之圖片轉換後的邊界
+    boundary1_00 = [0, 0 ,1]
+    boundary1_01 = [0, img1.shape[1], 1]
+    boundary1_11 = [img1.shape[0], img1.shape[1], 1] 
+    boundary1_10 = [img1.shape[0] , 0, 1]
+
+    newboundary1_00 = np.dot(H, boundary1_00)
+    newboundary1_01 = np.dot(H, boundary1_01)
+    newboundary1_11 = np.dot(H, boundary1_11)
+    newboundary1_10 = np.dot(H, boundary1_10)
+    newboundary1_00[0:3] = newboundary1_00[0:3]/newboundary1_00[2]
+    newboundary1_01[0:3] = newboundary1_01[0:3]/newboundary1_01[2]
+    newboundary1_11[0:3] = newboundary1_11[0:3]/newboundary1_11[2]
+    newboundary1_10[0:3] = newboundary1_10[0:3]/newboundary1_10[2]
+    print('newboundary1_00 = ', newboundary1_00)
+    print('newboundary1_01 = ', newboundary1_01)
+    print('newboundary1_11 = ', newboundary1_11)
+    print('newboundary1_10 = ', newboundary1_10)
+
+    # max height & weight
+    h1 = newboundary1_10 - newboundary1_00
+    h2 = newboundary1_11 - newboundary1_01
+    w1 = newboundary1_01 - newboundary1_00
+    w2 = newboundary1_11 - newboundary1_10
+    h = int(np.ceil(max(h1[0], h2[0])))
+    w = int(np.ceil(max(w1[1], w2[1])))
+    print('h = ', h, 'w = ', w)
+
+    # 位移保留完整圖片(還未用到)
+    offset = 0
+
+    if newboundary1_00[0] < 0 :
+        offset = -1*newboundary1_00[0]
+        # newboundary1_00[0] = newboundary1_00[0] + offset
+        # newboundary1_01[0] = newboundary1_01[0] + offset
+        # newboundary1_11[0] = newboundary1_11[0] + offset
+        # newboundary1_10[0] = newboundary1_10[0] + offset
+        
+
+    if newboundary1_01[0] < 0 :
+        offset = -1*newboundary1_01[0]
+        # newboundary1_00[0] = newboundary1_00[0] + offset
+        # newboundary1_01[0] = newboundary1_01[0] + offset
+        # newboundary1_11[0] = newboundary1_11[0] + offset
+        # newboundary1_10[0] = newboundary1_10[0] + offset
+        
+    # print(offset)
+    inverseH = np.linalg.inv(H)
+    print(inverseH)
+    img = np.zeros((max(img1.shape[0], h), img1.shape[1]+w, 3), np.uint8)
+    img.fill(200)
+
+    for i in range(max(img1.shape[0], h)):
+        for j in range(img1.shape[1]+w):
+            invP = np.dot(inverseH, [i, j, 1])
+            invP[0:3] = invP[0:3]/invP[2]
+            if int(invP[0]) < 0 or int(invP[1]) < 0 or int(invP[0]) >= img1.shape[0] or int(invP[1]) >= img1.shape[1]:
+                if i >= 0 and i < img1.shape[0]-1 and j >= 0 and j < img1.shape[1]-1:
+                    img[i][j] = img2[i][j]
+                else: 
+                    img[i][j] = 0
+            else:
+                img[i][j] = img1[int(invP[0])][int(invP[1])]
+
+
+    cv2.imshow('img', img)
+    cv2.imwrite('./result_parrington/AlignmentTest.jpg', img)
+    cv2.waitKey(0)
+
