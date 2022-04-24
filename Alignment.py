@@ -238,14 +238,12 @@ def BlendPyramid(pyrA, pyrB, pyrMask):
     
     return blendedP
 
+# 重建
 def CollapsePyramid(blendedP):
     levels = len(blendedP)
     currentImg = blendedP[0]
     for i in range(1, levels):
         size = (blendedP[i].shape[1], blendedP[i].shape[0])
-        plt.figure()
-        plt.imshow(currentImg.astype('uint8'))
-        plt.show()
         currentImg = pyrUp(currentImg, dstsize=size)
         
         currentImg = blendedP[i] + currentImg
@@ -254,15 +252,6 @@ def CollapsePyramid(blendedP):
     return blendedImg
 
 
-
-def Reconstruct(BlendedP):
-    img = BlendedP[0]
-    for lev_img in BlendedP[1::1]:
-        size = (lev_img.shape[1], lev_img.shape[0])
-        img = cv2.pyrUp(img, dstsize=size)
-        img = img + lev_img
-    
-    return img
 
 def MultiBandBlending(img1, img2, correspond):
     
@@ -289,9 +278,7 @@ def MultiBandBlending(img1, img2, correspond):
 
     BlendedP = BlendPyramid(LP2, LP1, MaskP)
 
-    Result = Reconstruct(BlendedP)
-    Result[Result > 255] = 255
-    Result[Result < 0] = 0
+    Result = CollapsePyramid(BlendedP)
 
     plt.imshow(Result.astype('uint8'))
     plt.show()
