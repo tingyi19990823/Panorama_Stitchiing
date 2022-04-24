@@ -1,10 +1,15 @@
 from itertools import count
 import random
 from re import X
+from cv2 import pyrUp
 import numpy as np
 import cv2
 import math
 import os
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.fft import dst
+
 
 result_dir = "./result_parrington"
 
@@ -101,7 +106,7 @@ def FinalH(correspond):
     print(max)
     return TH
 
-def BoundaryCompute(img1, img2):
+def BoundaryCompute(img1, img2, H):
 
     # 找出要變換之圖片轉換後的邊界
     boundary1_00 = [0, 0 ,1]
@@ -131,34 +136,23 @@ def BoundaryCompute(img1, img2):
     w = int(np.ceil(max(w1[1], w2[1])))
     print('h = ', h, 'w = ', w)
 
-    # 位移保留完整圖片(還未用到)
-    offset = 0
+    w1 = img2.shape[1] - newboundary1_00[1]
+    w2 = img2.shape[1] - newboundary1_10[1]
+    overlap = int(max(w1, w2))
 
-    if newboundary1_00[0] < 0 :
-        offset = -1*newboundary1_00[0]
-        # newboundary1_00[0] = newboundary1_00[0] + offset
-        # newboundary1_01[0] = newboundary1_01[0] + offset
-        # newboundary1_11[0] = newboundary1_11[0] + offset
-        # newboundary1_10[0] = newboundary1_10[0] + offset
-        
-
-    if newboundary1_01[0] < 0 :
-        offset = -1*newboundary1_01[0]
-        # newboundary1_00[0] = newboundary1_00[0] + offset
-        # newboundary1_01[0] = newboundary1_01[0] + offset
-        # newboundary1_11[0] = newboundary1_11[0] + offset
-        # newboundary1_10[0] = newboundary1_10[0] + offset
     
-    return h, w, offset
+    return h, w, overlap
 
-def MergeImg(H, h, w, img1, img2):
+def MergeImg(H, h, w, img1, img2, overlapw):
     inverseH = np.linalg.inv(H)
     print(inverseH)
-    img = np.zeros((max(img1.shape[0], h), img1.shape[1]+w, 3), np.uint8)
-    img.fill(200)
+    img = np.ones((max(img1.shape[0], h), img1.shape[1]+w-overlapw, 3), np.uint8)
+    newimg1 = np.ones((max(img1.shape[0], h), img1.shape[1]+w-overlapw, 3), np.uint8)
+    newimg2 = np.ones((max(img1.shape[0], h), img2.shape[1], 3), np.uint8)
+    newimg2.fill(0)
 
     for i in range(max(img1.shape[0], h)):
-        for j in range(img1.shape[1]+w):
+        for j in range(img1.shape[1]+w-overlapw):
             invP = np.dot(inverseH, [i, j, 1])
             invP[0:3] = invP[0:3]/invP[2]
             if int(invP[0]) < 0 or int(invP[1]) < 0 or int(invP[0]) >= img1.shape[0] or int(invP[1]) >= img1.shape[1]:
@@ -166,28 +160,156 @@ def MergeImg(H, h, w, img1, img2):
                     img[i][j] = img2[i][j]
                 else: 
                     img[i][j] = 0
+                newimg1[i][j] = 0
             else:
+                newimg1[i][j] = img1[int(invP[0])][int(invP[1])]
                 img[i][j] = img1[int(invP[0])][int(invP[1])]
 
+    for i in range(img2.shape[0]):
+        for j in range(img2.shape[1]):
+            newimg2[i][j] = img2[i][j]
 
-    cv2.imshow('img', img)
-    cv2.imwrite('./result_parrington/AlignmentTest.jpg', img)
-    cv2.waitKey(0)
+
+    return newimg1, newimg2, img
+
+
+def GenerateMask(newimg1, newimg2, overlapw):
+    if newimg1.shape[0] != newimg2.shape[0]:
+        print("error: image dim error")
+        return 
+    
+    w1 = newimg1.shape[1] # 右圖
+    w2 = newimg2.shape[1] # 左圖
+
+    shape = np.array(newimg1.shape)
+
+    subimg1 = np.zeros(shape, np.uint8)
+    start = w2 - overlapw
+    subimg1[:, start:] = newimg1[:, start:]
+
+    subimg2 = np.zeros(shape, np.uint8)
+    subimg2[:, :w2] = newimg2[:, :]
+
+    mask = np.zeros(shape)
+    mask[:, w2 - int(overlapw/2):] = 1
+
+    return subimg1, subimg2, mask
+
+
+def GussianPyramid(img, levels):
+
+    _GP = []
+    _GP.append(img)
+
+    currentImg = img
+
+    for i in range(1, levels):
+        downsampleImg = 0
+        downsampleImg = cv2.pyrDown(currentImg)
+        _GP.append(downsampleImg)
+        currentImg = downsampleImg
+
+    return _GP
+
+def LaplacianPyramid(GP):
+
+    levels = len(GP)
+    _LP = []
+    _LP.append(GP[levels-1])
+
+    for i in range(levels - 2, -1, -1):
+        upsampleImg = 0
+        size = (GP[i].shape[1], GP[i].shape[0])
+        upsampleImg = pyrUp(GP[i+1], dstsize=size)
+        currentImg = cv2.subtract(GP[i], upsampleImg)
+        _LP.append(currentImg)
+
+    return _LP
+
+def BlendPyramid(pyrA, pyrB, pyrMask):
+    levels = len(pyrA)
+    blendedP = []
+
+    for i in range(0, levels):
+        blendedImg = pyrA[i]*(1.0 - pyrMask[levels-1-i]) + pyrB[i]*(pyrMask[levels-1-i])
+        print('blendedImg = ', blendedImg.shape)
+
+        blendedP.append(blendedImg)
+    
+    return blendedP
+
+def CollapsePyramid(blendedP):
+    levels = len(blendedP)
+    currentImg = blendedP[0]
+    for i in range(1, levels):
+        size = (blendedP[i].shape[1], blendedP[i].shape[0])
+        plt.figure()
+        plt.imshow(currentImg.astype('uint8'))
+        plt.show()
+        currentImg = pyrUp(currentImg, dstsize=size)
+        
+        currentImg = blendedP[i] + currentImg
+
+    blendedImg = cv2.convertScaleAbs(currentImg)
+    return blendedImg
+
+
+
+def Reconstruct(BlendedP):
+    img = BlendedP[0]
+    for lev_img in BlendedP[1::1]:
+        size = (lev_img.shape[1], lev_img.shape[0])
+        img = cv2.pyrUp(img, dstsize=size)
+        img = img + lev_img
+    
+    return img
+
+def MultiBandBlending(img1, img2, correspond):
+    
+    # Find the Best Homography Matrix
+    H = FinalH(correspond)
+    np.save(os.path.join(result_dir,'Best_Homography_Matrix'),H) # save the H Matrix
+
+    # conpute img1(which will be transformed) new height & weight
+    h, w, overlap = BoundaryCompute(img1, img2, H)
+     
+    # Merge two image
+    newimg1, newimg2, img = MergeImg(H, h, w, img1, img2, overlap)
+    subimg1, subimg2, mask = GenerateMask(newimg1, newimg2, overlap)
+
+    levels = int(np.floor(np.log2(min(newimg1.shape[0], newimg1.shape[1], newimg2.shape[0], newimg2.shape[1]))))
+
+    print('Levels = ', levels)
+
+    MaskP = GussianPyramid(mask, levels)
+    GP1 = GussianPyramid(subimg1, levels)
+    GP2 = GussianPyramid(subimg2, levels)
+    LP1 = LaplacianPyramid(GP1)
+    LP2 = LaplacianPyramid(GP2)
+
+    BlendedP = BlendPyramid(LP2, LP1, MaskP)
+
+    Result = Reconstruct(BlendedP)
+    Result[Result > 255] = 255
+    Result[Result < 0] = 0
+
+    plt.imshow(Result.astype('uint8'))
+    plt.show()
+    return Result
+
 
 if __name__ == '__main__':
     correspond = np.load('./result_parrington/correspond_0.npy')
     
-    # Find the Best Homography Matrix
-    H = FinalH(correspond)
-    print(H)
-    np.save(os.path.join(result_dir,'Best_Homography_Matrix'),H)
-
     # Stitching Image
     # 讀圖片
-    img1 = cv2.imread('./result_parrington/corner0.jpg')  # 右圖, 要轉換的圖
-    img2 = cv2.imread('./result_parrington/corner1.jpg')  # 左圖
+    img1 = cv2.imread('./parrington/prtn00.jpg')  # 右圖, 要轉換的圖
+    img2 = cv2.imread('./parrington/prtn01.jpg')  # 左圖
 
-    h, w, offset = BoundaryCompute(img1, img2)
-    MergeImg(H, h, w, img1, img2)
+
+
+    MultiBandBlending(img1, img2, correspond)
+    
+    
     
 
