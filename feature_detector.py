@@ -56,10 +56,11 @@ def Non_Maximal_Suppression(input, keypoint_count):
     mask = np.zeros((input.shape[0],input.shape[1]),dtype = float)
     keypoints = 0   # 找到的特徵點數量
     radius = 0
-    if input.shape[0] > input.shape[1]:
-        radius = input.shape[0]
-    else:
-        radius = input.shape[1]
+    # if input.shape[0] > input.shape[1]:
+    #     radius = input.shape[0]
+    # else:
+    #     radius = input.shape[1]
+    radius = 22
     while keypoints < keypoint_count:
         radius = radius - 10
         keypoints = 0
@@ -106,7 +107,7 @@ def Non_Maximal_Suppression(input, keypoint_count):
 # input: 要detect的圖片
 # output: 灰階、遮罩、角落偵測圖片
 def Corner_detection(img,keypoint_count):
-    
+    start = time.clock()
     grayImg = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     blurImg = cv2.GaussianBlur(grayImg,(3,3),1.0)
 
@@ -134,7 +135,14 @@ def Corner_detection(img,keypoint_count):
     pooledImg = Max_Pooling(corner_response,kernel_size)
 
     maskImg = Non_Maximal_Suppression(pooledImg,keypoint_count)
-
+   
     cornerImg = Create_CornerImg(img,maskImg)
 
     return grayImg, maskImg, cornerImg
+
+
+if __name__ == '__main__':
+    img1 = cv2.imread('./lin_test/prtn00.jpg')
+    img2 = cv2.imread('./lin_test/prtn01.jpg')
+    Corner_detection(img1,500)
+    Corner_detection(img2,500)

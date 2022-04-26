@@ -1,3 +1,5 @@
+from itertools import count
+from stat import FILE_ATTRIBUTE_READONLY
 from cv2 import norm, rotate
 import numpy as np
 import cv2
@@ -10,7 +12,10 @@ def Feature_Upsample(feature):
     for i in range(0,8):
         for j in range(0,8):
             output[i,j] = np.sum(feature[i*5:i*5+5,j*5:j*5+5])
-    output = (output - np.mean(output)) / np.std(output)
+    #if np.std(output) == 0.0:
+        #print('feature out of bound')
+    output = np.divide((output - np.mean(output)),np.std(output),out = np.zeros_like(output), where=np.std(output) != 0)
+    
     return output
 
 # input: 彩色圖片
@@ -24,6 +29,9 @@ def MSOP_descriptor_vector(img, mask,feature_count):
     height , width = img.shape[:2]
     grayImg = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     blurImg = cv2.GaussianBlur(grayImg,(3,3),4.5)
+    # cv2.imshow('test',blurImg)
+    # cv2.imshow('test2',grayImg)
+    # cv2.waitKey(0)
     Ix = cv2.Sobel(blurImg,cv2.CV_64F,1,0)
     Iy = cv2.Sobel(blurImg,cv2.CV_64F,0,1)
     # 找 gradient 的大小和旋轉角度
@@ -73,6 +81,19 @@ def MSOP_descriptor_vector(img, mask,feature_count):
                 '''
 
                 feature_resize = Feature_Upsample(rotate_feature)
+                
+                # if index == 0:
+                #     print(i,j)
+                #     print('40*40: ',rotate_feature)
+                #     print('height_offset_up :',height_offset_up)
+                #     print('height_offset_down: ',height_offset_down)
+                #     print('width_offset_left: ', width_offset_left)
+                #     print('width_offset_left: ',width_offset_right)
+                #     print('shape: ',rotate_feature.shape)
+                #     print('8*8: ',feature_resize)
+                    # cv2.imshow('test',rotate_feature)
+                    # cv2.waitKey(0)
+                    
                 feature[:,:,index] = feature_resize
                 feature_index[index,0] = i
                 feature_index[index,1] = j
@@ -88,8 +109,25 @@ def MSOP_descriptor_vector(img, mask,feature_count):
 
 
 if __name__ == '__main__':
-    img = cv2.imread('./pic/test.jpg')
-    mask_npy = np.load('./result_pic/mask_0.npy')
-    # img = cv2.imread('./pic/test2.jpg')
-    # mask_npy = np.load('./result_pic/mask_1.npy')
-    MSOP_descriptor_vector(img,mask_npy,500)
+    img1 = cv2.imread('./lin_test/prtn00.jpg')
+    #mask_npy1 = np.load('./lin_test/mask_0_0.npy')
+    mask_npy1 = np.load('./lin_test/my_array0.npy').astype(int)
+    img2 = cv2.imread('./lin_test/prtn01.jpg')
+    #mask_npy2 = np.load('./lin_test/mask_1_0.npy')
+    mask_npy2 = np.load('./lin_test/my_array1.npy').astype(int)
+    #print(img1.shape)
+    print(mask_npy1.dtype)
+
+    count1 = (mask_npy1 == 255).sum()
+    count2 = (mask_npy2 == 255).sum()
+    print(print(mask_npy1[mask_npy1 != 0]))
+    print(count1)
+    print(count2)
+
+    feature1,index1 = MSOP_descriptor_vector(img1,mask_npy1,count1)
+    feature2,index2 = MSOP_descriptor_vector(img2,mask_npy2,count2)
+
+    np.save('./lin_test/feature_0.npy',feature1)
+    np.save('./lin_test/feature_index0.npy',index1)
+    np.save('./lin_test/feature_1.npy',feature2)
+    np.save('./lin_test/feature_index1.npy',index2)

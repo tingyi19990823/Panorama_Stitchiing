@@ -8,7 +8,6 @@ import math
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.fft import dst
 
 
 result_dir = "./result_parrington"
@@ -102,6 +101,11 @@ def FinalH(correspond):
         if InlierPartial(H, correspond) > max:
             max = InlierPartial(H, correspond)
             TH = H
+    # while(max < 0.9):
+    #     H = alignment(randompair(correspond))
+    #     if InlierPartial(H, correspond) > max:
+    #         max = InlierPartial(H, correspond)
+    #         TH = H
     
     print(max)
     return TH
@@ -146,9 +150,10 @@ def BoundaryCompute(img1, img2, H):
 def MergeImg(H, h, w, img1, img2, overlapw):
     inverseH = np.linalg.inv(H)
     print(inverseH)
-    img = np.ones((max(img1.shape[0], h), img1.shape[1]+w-overlapw, 3), np.uint8)
-    newimg1 = np.ones((max(img1.shape[0], h), img1.shape[1]+w-overlapw, 3), np.uint8)
-    newimg2 = np.ones((max(img1.shape[0], h), img2.shape[1], 3), np.uint8)
+    # 型態問題
+    img = np.ones((max(img1.shape[0], h), img1.shape[1]+w-overlapw, 3), float)
+    newimg1 = np.ones((max(img1.shape[0], h), img1.shape[1]+w-overlapw, 3), float)
+    newimg2 = np.ones((max(img1.shape[0], h), img2.shape[1], 3), float)
     newimg2.fill(0)
 
     for i in range(max(img1.shape[0], h)):
@@ -182,12 +187,12 @@ def GenerateMask(newimg1, newimg2, overlapw):
     w2 = newimg2.shape[1] # 左圖
 
     shape = np.array(newimg1.shape)
-
-    subimg1 = np.zeros(shape, np.uint8)
+    # 型態問題
+    subimg1 = np.zeros(shape, float)
     start = w2 - overlapw
     subimg1[:, start:] = newimg1[:, start:]
 
-    subimg2 = np.zeros(shape, np.uint8)
+    subimg2 = np.zeros(shape, float)
     subimg2[:, :w2] = newimg2[:, :]
 
     mask = np.zeros(shape)
@@ -222,6 +227,7 @@ def LaplacianPyramid(GP):
         size = (GP[i].shape[1], GP[i].shape[0])
         upsampleImg = pyrUp(GP[i+1], dstsize=size)
         currentImg = cv2.subtract(GP[i], upsampleImg)
+        # currentImg = GP[i] - upsampleImg
         _LP.append(currentImg)
 
     return _LP
@@ -265,7 +271,13 @@ def MultiBandBlending(img1, img2, correspond):
     # Merge two image
     newimg1, newimg2, img = MergeImg(H, h, w, img1, img2, overlap)
     subimg1, subimg2, mask = GenerateMask(newimg1, newimg2, overlap)
-
+    # plt.figure(1)
+    # plt.imshow(subimg1.astype('uint8'))
+    # plt.figure(2)
+    # plt.imshow(subimg2.astype('uint8'))
+    # plt.figure(3)
+    # plt.imshow(mask)
+    # plt.show()
     levels = int(np.floor(np.log2(min(newimg1.shape[0], newimg1.shape[1], newimg2.shape[0], newimg2.shape[1]))))
 
     print('Levels = ', levels)
@@ -279,9 +291,9 @@ def MultiBandBlending(img1, img2, correspond):
     BlendedP = BlendPyramid(LP2, LP1, MaskP)
 
     Result = CollapsePyramid(BlendedP)
-
-    plt.imshow(Result.astype('uint8'))
-    plt.show()
+    # cv2.imwrite('result.jpg',Result)
+    # plt.imshow(Result.astype('uint8'))
+    # plt.show()
     return Result
 
 
