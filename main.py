@@ -27,8 +27,7 @@ if __name__ == '__main__':
     # 讀圖片
     for filename in os.listdir(r"./" + img_dir):
         img_list.append(cv2.imread(os.path.join(img_dir,filename)))
-    for i in range(0,len(img_list)):
-        img_list[i] = cv2.resize(img_list[i], (int(img_list[i].shape[1]/10),int(img_list[i].shape[0]/10)), interpolation = cv2.INTER_AREA)
+
     
     # index = 0
     # for img in img_list:
@@ -45,6 +44,9 @@ if __name__ == '__main__':
     #     np.save(os.path.join(result_dir,'feature_'+ str(index)),description)
     #     np.save(os.path.join(result_dir,'feature_index'+ str(index)),description_index)
     #     index = index + 1
+
+    for i in range(0,len(img_list)):
+        img_list[i] = cv2.resize(img_list[i], (int(img_list[i].shape[1]/10),int(img_list[i].shape[0]/10)), interpolation = cv2.INTER_AREA)
 
     stitched_img = []
     for i in range(0,len(img_list)-1):

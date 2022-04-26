@@ -2,6 +2,7 @@
 from operator import index
 from itertools import count
 from re import X
+from cv2 import circle
 import numpy as np
 import cv2
 import math
@@ -13,11 +14,12 @@ result_dir = "./result_parrington"
 
 def Matcher(img1,img2,feature1,feature2,index1,index2):
     feature_count = feature1.shape[2]
-
+    circle_img1 = img1
+    circle_img2 = img2
     # concatenate_img = np.concatenate((img2,img1),axis = 1)
 
     # Threshold
-    threshold = 2.5
+    threshold = 2.0
 
     # 儲存對應點
     # correspond = np.zeros((feature_count,4))
@@ -45,6 +47,8 @@ def Matcher(img1,img2,feature1,feature2,index1,index2):
             # concatenate_img = cv2.circle(concatenate_img,(match_y + img1.shape[1],match_x),5,(255,0,0),1)    # 右圖
             # concatenate_img = cv2.circle(concatenate_img,(origin_y + img2.shape[1],origin_x),5,(255,0,0),1)    # 右圖
             # concatenate_img = cv2.circle(concatenate_img,(match_y,match_x),5,(255,0,0),1)                      # 左圖
+            circle_img1 = cv2.circle(circle_img1,(origin_y,origin_x),5,(255,0,0),1)
+            circle_img2 = cv2.circle(circle_img2,(match_y,match_x),5,(255,0,0),1)
             if counter == 0:
                 correspondA = [i, origin_x, origin_y, match_x, match_y]
             else:
@@ -52,10 +56,14 @@ def Matcher(img1,img2,feature1,feature2,index1,index2):
                 correspondA = np.append(correspondA, correspondB, axis=0)
                 
             counter = counter + 1
+    
     if counter == 0:
         sys.exit('沒有 Match 點 !!!')
     correspondA = np.reshape(correspondA, (counter, 5))    
     print('# of matching point = ', counter)
+    cv2.imshow('left',circle_img1)
+    cv2.imshow('right',circle_img2)
+    cv2.waitKey(0)
     # print(correspondA)
     # cv2.imshow('test',concatenate_img)
     # cv2.waitKey(0)

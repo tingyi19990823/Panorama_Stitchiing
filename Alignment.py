@@ -44,12 +44,16 @@ def alignment(pairs):
         B[2*i+1][0] = pairs[i][3]
 
     RR = np.dot(R.T, R)
-    RR = np.linalg.inv(RR)
-    T = np.dot(RR, R.T)
-    T = np.dot(T, B)
-    H = np.append(T, 1).reshape(3, 3)
-   
-    return H
+    try:
+        RR = np.linalg.inv(RR)
+    except:
+        print('error: Inverse Matrix Does not exist!')
+        return 0
+    else:
+        T = np.dot(RR, R.T)
+        T = np.dot(T, B)
+        H = np.append(T, 1).reshape(3, 3)
+        return H
 
 # 計算其他點透過變換式得到的變換點與原始點的差異
 def error(H, pair):
@@ -96,7 +100,7 @@ def InlierPartial(H, correspond):
 def FinalH(correspond):
     TH = alignment(randompair(correspond))
     max = 0
-    for i in range(100):
+    for i in range(300):
         H = alignment(randompair(correspond))
         if InlierPartial(H, correspond) > max:
             max = InlierPartial(H, correspond)
@@ -138,11 +142,13 @@ def BoundaryCompute(img1, img2, H):
     w2 = newboundary1_11 - newboundary1_10
     h = int(np.ceil(max(h1[0], h2[0])))
     w = int(np.ceil(max(w1[1], w2[1])))
-    print('h = ', h, 'w = ', w)
-
+    
     w1 = img2.shape[1] - newboundary1_00[1]
     w2 = img2.shape[1] - newboundary1_10[1]
     overlap = int(max(w1, w2))
+
+    print('h = ', h, 'w = ', w, 'overlap = ', overlap)
+
 
     
     return h, w, overlap
@@ -186,7 +192,15 @@ def GenerateMask(newimg1, newimg2, overlapw):
     w1 = newimg1.shape[1] # 右圖
     w2 = newimg2.shape[1] # 左圖
 
+
+    plt.figure()
+    plt.imshow(newimg1.astype(np.uint8))
+    plt.figure()
+    plt.imshow(newimg2.astype(np.uint8))
+    plt.show()
+
     shape = np.array(newimg1.shape)
+    shape[1] = max(w1, w2)
     # 型態問題
     subimg1 = np.zeros(shape, float)
     start = w2 - overlapw
@@ -197,6 +211,12 @@ def GenerateMask(newimg1, newimg2, overlapw):
 
     mask = np.zeros(shape)
     mask[:, w2 - int(overlapw/2):] = 1
+
+    plt.figure()
+    plt.imshow(subimg1.astype(np.uint8))
+    plt.figure()
+    plt.imshow(subimg2.astype(np.uint8))
+    plt.show()
 
     return subimg1, subimg2, mask
 
@@ -291,9 +311,9 @@ def MultiBandBlending(img1, img2, correspond):
     BlendedP = BlendPyramid(LP2, LP1, MaskP)
 
     Result = CollapsePyramid(BlendedP)
-    # cv2.imwrite('result.jpg',Result)
-    # plt.imshow(Result.astype('uint8'))
-    # plt.show()
+    cv2.imwrite('result.jpg',Result)
+    cv2.imshow('result', Result)
+    cv2.waitKey(0)
     return Result
 
 
@@ -308,7 +328,3 @@ if __name__ == '__main__':
 
 
     MultiBandBlending(img1, img2, correspond)
-    
-    
-    
-
