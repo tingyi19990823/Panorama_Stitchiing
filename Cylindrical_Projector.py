@@ -25,17 +25,17 @@ def CylindricalProjection(img,cylinder_radius):
 
 
 if __name__ == '__main__':
-    for filename in os.listdir(r"./parrington"):
-        print('projecting {} ... \n'.format(filename))
-        img = cv2.imread('./parrington/' + filename)
-        projectedImg = CylindricalProjection(img,cylinder_radius)
-        cv2.imwrite('./result_project/project_' + filename,projectedImg)
+    # for filename in os.listdir(r"./parrington"):
+    #     print('projecting {} ... \n'.format(filename))
+    #     img = cv2.imread('./parrington/' + filename)
+    #     projectedImg = CylindricalProjection(img,cylinder_radius)
+    #     cv2.imwrite('./result_project/project_' + filename,projectedImg)
     # print(img.dtype)
     # cv2.imshow('test1',img)
     # cv2.waitKey(0)
 
-    # img = cv2.imread('./parrington/prtn00.jpg')
-    # for i in range(300,focal_length,20):
-    #     projectedImg = CylindricalProjection(img,i)
-    #     cv2.imwrite('./result_project/project_new_'+str(i)+'.jpg',projectedImg)
-    #     print(i)
+    img = cv2.imread('./parrington/prtn00.jpg')
+    for i in range(300,focal_length,20):
+        projectedImg = CylindricalProjection(img,i)
+        cv2.imwrite('./result_project/project_new_'+str(i)+'.jpg',projectedImg)
+        print(i)

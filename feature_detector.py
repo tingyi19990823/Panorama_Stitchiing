@@ -9,7 +9,8 @@ from numpy import unravel_index
 import time
 
 corner_threshold = 10 # 1000比較正常
-kernel_size = 10
+kernel_size = 3
+border_threshold = 20
 # keypoint_count = 250
 
 # input: 要pooling的圖片(灰階)、Kernel_Size
@@ -60,9 +61,11 @@ def Non_Maximal_Suppression(input, keypoint_count):
     #     radius = input.shape[0]
     # else:
     #     radius = input.shape[1]
-    radius = 22
+    radius = 100
     while keypoints < keypoint_count:
-        radius = radius - 10
+        radius = radius - 1
+        if radius < 0:
+            radius = 0
         keypoints = 0
         mask = np.copy(input)
         while np.any(mask > corner_threshold) :
@@ -70,7 +73,7 @@ def Non_Maximal_Suppression(input, keypoint_count):
             x_center = current_keypoint_index[0]
             y_center = current_keypoint_index[1]
 
-            if (x_center + 20) > height or (x_center - 20) < 0 or (y_center + 20) > width or (y_center - 20) < 0:
+            if (x_center + border_threshold) > height or (x_center - border_threshold) < 0 or (y_center + border_threshold) > width or (y_center - border_threshold) < 0:
                 mask[x_center,y_center] = 0
                 continue
 
@@ -135,8 +138,10 @@ def Corner_detection(img,keypoint_count):
     pooledImg = Max_Pooling(corner_response,kernel_size)
 
     maskImg = Non_Maximal_Suppression(pooledImg,keypoint_count)
-   
-    cornerImg = Create_CornerImg(img,maskImg)
+    # cv2.imshow('mask',maskImg)
+    # cv2.waitKey(0)
+    img1 = np.copy(img)
+    cornerImg = Create_CornerImg(img1,maskImg)
 
     return grayImg, maskImg, cornerImg
 

@@ -6,9 +6,6 @@ import numpy as np
 import cv2
 import math
 import os
-import pandas as pd
-import matplotlib.pyplot as plt
-
 
 result_dir = "./result_parrington"
 
@@ -42,6 +39,7 @@ def alignment(pairs):
 
         B[2*i][0] = pairs[i][2]
         B[2*i+1][0] = pairs[i][3]
+   
 
     RR = np.dot(R.T, R)
     try:
@@ -54,6 +52,13 @@ def alignment(pairs):
         T = np.dot(T, B)
         H = np.append(T, 1).reshape(3, 3)
         return H
+
+    # R = np.array(R)
+    # H = np.linalg.lstsq(R, B, rcond=None)[0]
+    # H = np.concatenate((H, [1]), axis=-1)
+    # H = np.reshape(H, (3, 3))
+
+    
 
 # 計算其他點透過變換式得到的變換點與原始點的差異
 def error(H, pair):
@@ -86,7 +91,7 @@ def error(H, pair):
 def InlierPartial(H, correspond):
     n = correspond.shape[0] # 有多少個matching point
     inlier = 0              # inlier數量
-    threshold = 3           # Threshold
+    threshold = 2.0           # Threshold
 
     for i in range(n):
         tempPair = np.zeros((4))
@@ -97,19 +102,14 @@ def InlierPartial(H, correspond):
     return inlier/n
 
 # 取得inlier最多的變換式
-def FinalH(correspond):
+def FinalH(correspond, times):
     TH = alignment(randompair(correspond))
     max = 0
-    for i in range(300):
+    for i in range(times):
         H = alignment(randompair(correspond))
         if InlierPartial(H, correspond) > max:
             max = InlierPartial(H, correspond)
             TH = H
-    # while(max < 0.9):
-    #     H = alignment(randompair(correspond))
-    #     if InlierPartial(H, correspond) > max:
-    #         max = InlierPartial(H, correspond)
-    #         TH = H
     
     print(max)
     return TH
@@ -146,7 +146,6 @@ def BoundaryCompute(img1, img2, H):
     w1 = img2.shape[1] - newboundary1_00[1]
     w2 = img2.shape[1] - newboundary1_10[1]
     overlap = int(max(w1, w2))
-
     print('h = ', h, 'w = ', w, 'overlap = ', overlap)
 
 
@@ -157,31 +156,25 @@ def MergeImg(H, h, w, img1, img2, overlapw):
     inverseH = np.linalg.inv(H)
     print(inverseH)
     # 型態問題
-    img = np.ones((max(img1.shape[0], h), img1.shape[1]+w-overlapw, 3), float)
-    newimg1 = np.ones((max(img1.shape[0], h), img1.shape[1]+w-overlapw, 3), float)
-    newimg2 = np.ones((max(img1.shape[0], h), img2.shape[1], 3), float)
+    newimg1 = np.ones((max(img1.shape[0], img2.shape[0], h), img1.shape[1]+w-overlapw, 3), float)
+    newimg2 = np.ones((max(img1.shape[0], img2.shape[0], h), img2.shape[1], 3), float)
     newimg2.fill(0)
 
-    for i in range(max(img1.shape[0], h)):
+    for i in range(max(img1.shape[0], img2.shape[0], h)):
         for j in range(img1.shape[1]+w-overlapw):
             invP = np.dot(inverseH, [i, j, 1])
             invP[0:3] = invP[0:3]/invP[2]
             if int(invP[0]) < 0 or int(invP[1]) < 0 or int(invP[0]) >= img1.shape[0] or int(invP[1]) >= img1.shape[1]:
-                if i >= 0 and i < img1.shape[0]-1 and j >= 0 and j < img1.shape[1]-1:
-                    img[i][j] = img2[i][j]
-                else: 
-                    img[i][j] = 0
                 newimg1[i][j] = 0
             else:
                 newimg1[i][j] = img1[int(invP[0])][int(invP[1])]
-                img[i][j] = img1[int(invP[0])][int(invP[1])]
 
     for i in range(img2.shape[0]):
         for j in range(img2.shape[1]):
             newimg2[i][j] = img2[i][j]
 
 
-    return newimg1, newimg2, img
+    return newimg1, newimg2
 
 
 def GenerateMask(newimg1, newimg2, overlapw):
@@ -191,13 +184,6 @@ def GenerateMask(newimg1, newimg2, overlapw):
     
     w1 = newimg1.shape[1] # 右圖
     w2 = newimg2.shape[1] # 左圖
-
-
-    plt.figure()
-    plt.imshow(newimg1.astype(np.uint8))
-    plt.figure()
-    plt.imshow(newimg2.astype(np.uint8))
-    plt.show()
 
     shape = np.array(newimg1.shape)
     shape[1] = max(w1, w2)
@@ -211,13 +197,6 @@ def GenerateMask(newimg1, newimg2, overlapw):
 
     mask = np.zeros(shape)
     mask[:, w2 - int(overlapw/2):] = 1
-
-    plt.figure()
-    plt.imshow(subimg1.astype(np.uint8))
-    plt.figure()
-    plt.imshow(subimg2.astype(np.uint8))
-    plt.show()
-
     return subimg1, subimg2, mask
 
 
@@ -228,11 +207,13 @@ def GussianPyramid(img, levels):
 
     currentImg = img
 
+
     for i in range(1, levels):
         downsampleImg = 0
         downsampleImg = cv2.pyrDown(currentImg)
         _GP.append(downsampleImg)
         currentImg = downsampleImg
+        
 
     return _GP
 
@@ -247,7 +228,6 @@ def LaplacianPyramid(GP):
         size = (GP[i].shape[1], GP[i].shape[0])
         upsampleImg = pyrUp(GP[i+1], dstsize=size)
         currentImg = cv2.subtract(GP[i], upsampleImg)
-        # currentImg = GP[i] - upsampleImg
         _LP.append(currentImg)
 
     return _LP
@@ -259,7 +239,7 @@ def BlendPyramid(pyrA, pyrB, pyrMask):
     for i in range(0, levels):
         blendedImg = pyrA[i]*(1.0 - pyrMask[levels-1-i]) + pyrB[i]*(pyrMask[levels-1-i])
         print('blendedImg = ', blendedImg.shape)
-
+        
         blendedP.append(blendedImg)
     
     return blendedP
@@ -278,26 +258,19 @@ def CollapsePyramid(blendedP):
     return blendedImg
 
 
-
-def MultiBandBlending(img1, img2, correspond):
+def MultiBandBlending(img1, img2, correspond, timers):
     
     # Find the Best Homography Matrix
-    H = FinalH(correspond)
+    H = FinalH(correspond, timers)
     np.save(os.path.join(result_dir,'Best_Homography_Matrix'),H) # save the H Matrix
 
     # conpute img1(which will be transformed) new height & weight
     h, w, overlap = BoundaryCompute(img1, img2, H)
      
     # Merge two image
-    newimg1, newimg2, img = MergeImg(H, h, w, img1, img2, overlap)
+    newimg1, newimg2 = MergeImg(H, h, w, img1, img2, overlap)
     subimg1, subimg2, mask = GenerateMask(newimg1, newimg2, overlap)
-    # plt.figure(1)
-    # plt.imshow(subimg1.astype('uint8'))
-    # plt.figure(2)
-    # plt.imshow(subimg2.astype('uint8'))
-    # plt.figure(3)
-    # plt.imshow(mask)
-    # plt.show()
+
     levels = int(np.floor(np.log2(min(newimg1.shape[0], newimg1.shape[1], newimg2.shape[0], newimg2.shape[1]))))
 
     print('Levels = ', levels)
@@ -324,7 +297,6 @@ if __name__ == '__main__':
     # 讀圖片
     img1 = cv2.imread('./parrington/prtn00.jpg')  # 右圖, 要轉換的圖
     img2 = cv2.imread('./parrington/prtn01.jpg')  # 左圖
-
 
 
     MultiBandBlending(img1, img2, correspond)

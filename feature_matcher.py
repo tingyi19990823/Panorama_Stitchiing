@@ -12,15 +12,23 @@ import sys
 
 result_dir = "./result_parrington"
 
-def Matcher(img1,img2,feature1,feature2,index1,index2):
+def Matcher(img1,img2,feature1,feature2,index1,index2, threshold):
     feature_count = feature1.shape[2]
     circle_img1 = img1
     circle_img2 = img2
     # concatenate_img = np.concatenate((img2,img1),axis = 1)
 
     # Threshold
-    threshold = 2.0
+    threshold = 1.8
 
+    # 只取img1的右邊，img2的左邊
+    img1_index = []
+    img2_index = []
+    for i in range(feature_count):
+        if index1[i,1] < (img1.shape[1]/2):
+            img1_index.append(i)
+        if index2[i,1] > (img2.shape[1]/2):
+            img2_index.append(i)
     # 儲存對應點
     # correspond = np.zeros((feature_count,4))
     correspondA = np.zeros((1, 5))
@@ -28,10 +36,10 @@ def Matcher(img1,img2,feature1,feature2,index1,index2):
     counter = 0
 
     counter = 0
-    for i in range(feature_count):
+    for i in img1_index:
         min_dist = math.inf
         min_index = -1 
-        for j in range(feature_count):
+        for j in img2_index:
             dist = math.sqrt(np.sum(np.square(feature1[:,:,i] - feature2[:,:,j])))
             if min_dist > dist:
                 min_dist = dist
@@ -47,8 +55,8 @@ def Matcher(img1,img2,feature1,feature2,index1,index2):
             # concatenate_img = cv2.circle(concatenate_img,(match_y + img1.shape[1],match_x),5,(255,0,0),1)    # 右圖
             # concatenate_img = cv2.circle(concatenate_img,(origin_y + img2.shape[1],origin_x),5,(255,0,0),1)    # 右圖
             # concatenate_img = cv2.circle(concatenate_img,(match_y,match_x),5,(255,0,0),1)                      # 左圖
-            circle_img1 = cv2.circle(circle_img1,(origin_y,origin_x),5,(255,0,0),1)
-            circle_img2 = cv2.circle(circle_img2,(match_y,match_x),5,(255,0,0),1)
+            # circle_img1 = cv2.circle(circle_img1,(origin_y,origin_x),5,(255,0,0),1)
+            # circle_img2 = cv2.circle(circle_img2,(match_y,match_x),5,(255,0,0),1)
             if counter == 0:
                 correspondA = [i, origin_x, origin_y, match_x, match_y]
             else:
@@ -61,9 +69,9 @@ def Matcher(img1,img2,feature1,feature2,index1,index2):
         sys.exit('沒有 Match 點 !!!')
     correspondA = np.reshape(correspondA, (counter, 5))    
     print('# of matching point = ', counter)
-    cv2.imshow('left',circle_img1)
-    cv2.imshow('right',circle_img2)
-    cv2.waitKey(0)
+    # cv2.imshow('left',circle_img1)
+    # cv2.imshow('right', circle_img2)
+    # cv2.waitKey(0)
     # print(correspondA)
     # cv2.imshow('test',concatenate_img)
     # cv2.waitKey(0)
@@ -82,5 +90,5 @@ if __name__ == '__main__':
     feature2 = np.load('./result_parrington/feature_1.npy')
     index2 = np.load('./result_parrington/feature_index1.npy')
 
-    Matcher(img1,img2,feature1,feature2,index1,index2)
+    Matcher(img1,img2,feature1,feature2,index1,index2, 2.0)
 
